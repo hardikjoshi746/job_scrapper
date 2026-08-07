@@ -1,0 +1,12 @@
+backend/.env
+backend/credentials.json
+backend/token.json
+backend/uploads/
+backend/generated/
+backend/jobhunt.db
+backend/venv/
+__pycache__/
+*.pyc
+*.pyo
+node_modules/
+.DS_Store

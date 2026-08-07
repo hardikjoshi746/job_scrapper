@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Resume Template</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 30px 38px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: #1a1a1a;
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 30px 38px;
+        font-size: 8.6pt;
+        line-height: 1.35;
+      }
+
+      :root {
+        --accent: #0d2b6e;
+        --dark: #1a1a1a;
+        --mid: #444444;
+        --light: #666666;
+      }
+
+      /* ---------- Header ---------- */
+      .name {
+        text-align: center;
+        font-size: 22pt;
+        font-weight: 700;
+        color: var(--accent);
+        margin: 0 0 4px 0;
+      }
+
+      .contact {
+        text-align: center;
+        font-size: 8.4pt;
+        color: var(--light);
+        margin: 0 0 14px 0;
+      }
+      .contact span::after {
+        content: "  |  ";
+        color: var(--light);
+      }
+      .contact span:last-child::after {
+        content: "";
+      }
+
+      /* ---------- Section headers ---------- */
+      h2.section {
+        font-size: 9.5pt;
+        font-weight: 700;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        margin: 14px 0 4px 0;
+        padding-bottom: 3px;
+        border-bottom: 0.8pt solid var(--accent);
+      }
+
+      /* ---------- Job / project entries ---------- */
+      .entry-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-top: 8px;
+      }
+      .entry-title-line {
+        font-size: 8.8pt;
+      }
+      .entry-title {
+        font-weight: 700;
+        color: var(--dark);
+      }
+      .entry-company {
+        color: var(--light);
+        font-weight: 400;
+      }
+      .entry-dates {
+        font-size: 8.8pt;
+        color: var(--mid);
+        white-space: nowrap;
+      }
+
+      /* ---------- Bullets ---------- */
+      ul.bullets {
+        list-style: none;
+        margin: 3px 0 0 0;
+        padding: 0;
+      }
+      ul.bullets li {
+        position: relative;
+        padding-left: 14px;
+        margin-bottom: 3px;
+        font-size: 8.6pt;
+        color: var(--dark);
+      }
+      ul.bullets li::before {
+        content: "";
+        position: absolute;
+        left: 2px;
+        top: 5px;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      /* ---------- Skills ---------- */
+      .skill-row {
+        font-size: 8.6pt;
+        margin-bottom: 4px;
+      }
+      .skill-label {
+        font-weight: 700;
+        color: var(--dark);
+      }
+      .skill-values {
+        color: var(--mid);
+      }
+
+      /* ---------- Education ---------- */
+      .edu-entry {
+        font-size: 8.8pt;
+        margin-bottom: 2px;
+      }
+      .edu-school {
+        font-weight: 700;
+        color: var(--dark);
+      }
+      .edu-degree {
+        color: var(--light);
+      }
+
+      @media print {
+        body {
+          padding: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ============ HEADER ============ -->
+    <div class="name">Full Name</div>
+    <div class="contact">
+      <span>City, ST</span><span>email@example.com</span
+      ><span>(555) 555-5555</span><span>github.com/username</span
+      ><span>linkedin.com/in/username</span>
+    </div>
+
+    <!-- ============ PROFESSIONAL EXPERIENCE ============ -->
+    <h2 class="section">Professional Experience</h2>
+
+    <div class="entry-header">
+      <div class="entry-title-line">
+        <span class="entry-title">Job Title</span>
+        <span class="entry-company">- Company Name, City, State</span>
+      </div>
+      <div class="entry-dates">Month Year - Month Year</div>
+    </div>
+    <ul class="bullets">
+      <li>
+        Bullet point describing a scoped accomplishment with a measurable
+        result.
+      </li>
+      <li>
+        Bullet point describing a scoped accomplishment with a measurable
+        result.
+      </li>
+      <li>
+        Bullet point describing a scoped accomplishment with a measurable
+        result.
+      </li>
+    </ul>
+
+    <div class="entry-header">
+      <div class="entry-title-line">
+        <span class="entry-title">Job Title</span>
+        <span class="entry-company">- Company Name, City, State</span>
+      </div>
+      <div class="entry-dates">Month Year - Month Year</div>
+    </div>
+    <ul class="bullets">
+      <li>
+        Bullet point describing a scoped accomplishment with a measurable
+        result.
+      </li>
+      <li>
+        Bullet point describing a scoped accomplishment with a measurable
+        result.
+      </li>
+    </ul>
+
+    <!-- ============ PROJECTS ============ -->
+    <h2 class="section">Academic Projects</h2>
+
+    <div class="entry-header">
+      <div class="entry-title-line">
+        <span class="entry-title">Project Name</span>
+      </div>
+      <div class="entry-dates">Month Year - Month Year</div>
+    </div>
+    <ul class="bullets">
+      <li>
+        Bullet point describing what was built and the technical approach.
+      </li>
+      <li>Bullet point describing the outcome or impact.</li>
+    </ul>
+
+    <!-- ============ ACHIEVEMENTS ============ -->
+    <h2 class="section">Achievements</h2>
+    <ul class="bullets">
+      <li>
+        <strong>Achievement Title</strong> &mdash; one-line description of the
+        achievement.
+      </li>
+      <li>
+        <strong>Achievement Title</strong> &mdash; one-line description of the
+        achievement.
+      </li>
+      <li>
+        <strong>Achievement Title</strong> &mdash; one-line description of the
+        achievement.
+      </li>
+    </ul>
+
+    <!-- ============ SKILLS ============ -->
+    <h2 class="section">Technical Skills</h2>
+    <div class="skill-row">
+      <span class="skill-label">Languages: </span
+      ><span class="skill-values">Skill, Skill, Skill, Skill</span>
+    </div>
+    <div class="skill-row">
+      <span class="skill-label">Category: </span
+      ><span class="skill-values">Skill, Skill, Skill, Skill</span>
+    </div>
+    <div class="skill-row">
+      <span class="skill-label">Category: </span
+      ><span class="skill-values">Skill, Skill, Skill, Skill</span>
+    </div>
+    <div class="skill-row">
+      <span class="skill-label">Category: </span
+      ><span class="skill-values">Skill, Skill, Skill, Skill</span>
+    </div>
+
+    <!-- ============ CERTIFICATIONS ============ -->
+    <h2 class="section">Certifications</h2>
+    <ul class="bullets">
+      <li>Certification, Certification, Certification</li>
+    </ul>
+
+    <!-- ============ EDUCATION ============ -->
+    <h2 class="section">Education</h2>
+    <div class="edu-entry">
+      <span class="edu-school">University Name</span>
+      <span class="edu-degree">- Degree, Field of Study</span>
+    </div>
+    <div class="edu-entry">
+      <span class="edu-school">University Name</span>
+      <span class="edu-degree">- Degree, Field of Study</span>
+    </div>
+  </body>
+</html>
