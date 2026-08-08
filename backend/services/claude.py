@@ -5,14 +5,16 @@ client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 async def tailor_resume(resume_text: str, job_description: str, template_html: str) -> str:
     message = await client.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-sonnet-5",
         max_tokens=4096,
         messages=[
             {
                 "role": "user",
-                "content": f"""You are an ATS resume expert. Your job is to tailor the candidate's real
-resume to the job description as aggressively as possible WITHOUT inventing experience that
-isn't there.
+                "content": f"""You are an ATS resume expert. Your job is to produce a complete, filled-in resume HTML by replacing ALL placeholder text in the template with REAL content from the candidate's resume, tailored to the job description.
+
+IMPORTANT: The template contains placeholder text like "Full Name", "Job Title", "Company Name", "City, ST", "Bullet point describing...", "Skill", "University Name" etc. You MUST replace ALL of these with the candidate's actual information. Do not leave any placeholder text in the output.
+
+LOCATION: If the job description specifies a city/state/country, update the candidate's location in the header to match that location. If the job is remote, keep the candidate's original location.
 
 <template>
 {template_html}
@@ -61,10 +63,27 @@ How to tailor:
    area, do not force a match — better to under-optimize than to produce a resume that collapses
    under a technical follow-up question. This tool answers to the candidate, not the ATS.
 
+8. ALL SECTIONS ARE MANDATORY. You MUST include every section from the template: Professional
+   Summary, Professional Experience, Academic Projects, Achievements, Technical Skills,
+   Certifications, AND Education. Never omit any section.
+
+9. PROFESSIONAL SUMMARY. Write 2-3 sentences in the summary section that pack in the most
+   important keywords from the job description while honestly reflecting the candidate's background.
+   This is the highest-value ATS section — make every word count.
+
+10. ONE PAGE, NO GAPS. The resume must fill the entire A4 page with no large empty spaces at
+    the bottom. If content is too short, expand bullet points to 2 lines, add a relevant extra
+    bullet per role, or expand the summary. If too long, trim bullets to 1 line. The page should
+    look full and complete.
+
 Output:
 Return ONLY the complete HTML, no explanation, no markdown code blocks, no commentary before or
 after the HTML."""
             }
         ]
     )
-    return message.content[0].text
+    # find the first text block (Claude may include ThinkingBlocks before the actual response)
+    for block in message.content:
+        if block.type == "text":
+            return block.text
+    raise ValueError("No text block found in Claude response")

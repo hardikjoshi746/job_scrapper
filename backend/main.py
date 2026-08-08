@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import applications, jobs
+from routers import applications, jobs, resume
 from database import Base, engine
 
 app = FastAPI(title="Job hunt application")
@@ -13,6 +13,7 @@ app.add_middleware(
 )
 app.include_router(applications.router, prefix="/api/applications", tags=["applications"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
+app.include_router(resume.router, prefix="/api/resume", tags=["resume"])
 
 
 @app.on_event("startup")
