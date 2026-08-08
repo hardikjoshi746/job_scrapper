@@ -33,13 +33,17 @@ async def apply(application_id: int, db: Session = Depends(get_db)):
         }
     )
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False, slow_mo=500)
+        browser = await p.chromium.launch_persistent_context(
+            user_data_dir="/Users/hardik/Library/Application Support/Google/Chrome",
+            channel="chrome",
+            headless=False,
+            slow_mo=500
+        )
         page = await browser.new_page()
         await page.goto(app.job_url, wait_until="networkidle")
         reports = await autofill_wizard(page, profile)
-        # keep browser open for user to review and submit
-        await page.wait_for_timeout(120000)  # 2 minutes
-        await browser.close()
+        # stay open until user manually closes the browser
+        await browser.wait_for_event("disconnected", timeout=0)
 
     return {
         "ats": reports[0].ats,
