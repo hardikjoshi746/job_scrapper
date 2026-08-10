@@ -1,27 +1,15 @@
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import applications, jobs, resume, apply, auth
 from database import Base, engine
 
 app = FastAPI(title="Job Hunt Application")
 
-ALLOWED_ORIGINS = os.environ.get(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://localhost:3000"
-).split(",")
-
-# Strip whitespace from each origin
-ALLOWED_ORIGINS = [o.strip() for o in ALLOWED_ORIGINS]
-
-# Allow all Vercel preview deployments matching *.vercel.app
-ALLOWED_ORIGIN_REGEX = r"https://.*\.vercel\.app"
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
