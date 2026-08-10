@@ -74,7 +74,13 @@ How to tailor:
 10. ONE PAGE, NO GAPS. The resume must fill the entire A4 page with no large empty spaces at
     the bottom. If content is too short, expand bullet points to 2 lines, add a relevant extra
     bullet per role, or expand the summary. If too long, trim bullets to 1 line. The page should
-    look full and complete.
+    look completely full with zero wasted whitespace.
+
+11. BOLD KEYWORDS. Within bullet points and the summary, wrap every exact keyword or phrase that
+    appears in the job description in <strong> tags (e.g. <strong>distributed systems</strong>).
+    Also bold key metrics and technologies. This helps both ATS scanners and human readers
+    instantly spot relevant skills. Do not bold entire sentences — only the specific keyword or
+    phrase (2–5 words max per bold).
 
 Output:
 Return ONLY the complete HTML, no explanation, no markdown code blocks, no commentary before or
