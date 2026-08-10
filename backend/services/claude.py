@@ -66,7 +66,8 @@ CRITICAL RULES — violating any is a failure:
 4. TAILOR BULLETS. Rewrite bullets using the JD's exact keywords where the candidate's real experience matches. Use the JD's terminology but never fabricate skills or metrics.
 5. BOLD FOR IMPACT. In each bullet, bold (a) the opening achievement + metric clause e.g. <strong>Reduced latency by 40%</strong> and (b) 1-2 specific JD keywords inline e.g. <strong>RAG pipelines</strong>. Max 2 bold phrases per bullet.
 6. PROFESSIONAL SUMMARY. Write 2-3 sentences packing JD keywords while honestly reflecting the candidate's background.
-7. SECTIONS. Include all sections present in the source resume. Only omit a section if the user instructions say to skip it.{custom_block}{feedback_block}
+7. SECTIONS. Include all sections present in the source resume. Only omit a section if the user instructions say to skip it.
+8. STRICT CONTENT GUARDRAILS. Never include any of the following in the resume: availability statements (e.g. "Available Tuesday–Thursday"), office location preferences, commute or hybrid preferences, salary expectations, personal statements unrelated to professional qualifications, or any content that does not belong in a standard professional resume. If such content exists in the source resume, silently omit it.{custom_block}{feedback_block}
 
 CSS TO USE:
 <style>{RESUME_CSS}</style>
