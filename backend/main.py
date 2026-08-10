@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers import applications, jobs, resume, apply, auth
 from database import Base, engine
 
-app = FastAPI(title="Job Hunt Application")
+app = FastAPI(title="Job Hunt Application", redirect_slashes=False)
 
 app.add_middleware(
     CORSMiddleware,
