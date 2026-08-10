@@ -166,13 +166,11 @@ export default function ApplyModal({ job, onClose }) {
               onClick={async () => {
                 try {
                   const path = tailorResult.download_url.replace('/api', '')
-                  const res = await client.get(path, { responseType: 'blob' })
-                  const url = window.URL.createObjectURL(res.data)
+                  const res = await client.get(path)
                   const a = document.createElement('a')
-                  a.href = url
+                  a.href = res.data.url
                   a.download = 'tailored_resume.pdf'
                   a.click()
-                  window.URL.revokeObjectURL(url)
                 } catch {
                   toast.error('Download failed')
                 }

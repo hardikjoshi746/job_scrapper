@@ -155,7 +155,7 @@ async def tailor_resume(
     resume_text: str,
     job_description: str,
     custom_instructions: str = "",
-    max_iterations: int = 3,
+    max_iterations: int = 2,
     progress_callback=None,
 ) -> dict:
     """

@@ -2,7 +2,6 @@ import os
 import json
 import asyncio
 import tempfile
-import aiofiles
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import RedirectResponse, StreamingResponse
@@ -253,7 +252,7 @@ def download_resume(
 
     if USE_S3:
         url = get_presigned_url(app.tailored_resume_path)
-        return RedirectResponse(url)
+        return {"url": url}
     else:
         from fastapi.responses import FileResponse
         return FileResponse(app.tailored_resume_path, media_type="application/pdf", filename="tailored_resume.pdf")
