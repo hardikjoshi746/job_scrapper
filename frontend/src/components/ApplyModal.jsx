@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { Sparkles, ExternalLink, X, Download } from 'lucide-react'
+import { Sparkles, ExternalLink, X, Download, Settings } from 'lucide-react'
 import client from '../api/client'
 import toast from 'react-hot-toast'
 
 export default function ApplyModal({ job, onClose }) {
   const [step, setStep] = useState('confirm') // confirm | tailoring | done
   const [downloadUrl, setDownloadUrl] = useState(null)
+  const [customInstructions, setCustomInstructions] = useState('')
+  const [showInstructions, setShowInstructions] = useState(false)
 
   const handleTailorAndApply = async () => {
     setStep('tailoring')
@@ -26,9 +28,9 @@ export default function ApplyModal({ job, onClose }) {
       const resumeId = resumeRes.data.id
 
       // 3. tailor resume
-      const tailorRes = await client.post('/resume/tailor', null, {
-        params: { application_id: appId, resume_id: resumeId },
-      })
+      const params = { application_id: appId, resume_id: resumeId }
+      if (customInstructions.trim()) params.custom_instructions = customInstructions.trim()
+      const tailorRes = await client.post('/resume/tailor', null, { params })
 
       // Store just the path — Axios client adds the base URL automatically
       setDownloadUrl(tailorRes.data.download_url.replace('/api', ''))
@@ -70,11 +72,32 @@ export default function ApplyModal({ job, onClose }) {
         {/* Confirm step */}
         {step === 'confirm' && (
           <>
-            <p className="text-slate-300 text-sm mb-6">
+            <p className="text-slate-300 text-sm mb-4">
               Would you like Claude to tailor your resume for this job before applying?
               It rewrites your resume to match the job's keywords for a better ATS score.
             </p>
-            <div className="flex flex-col gap-3">
+
+            {/* Custom instructions toggle */}
+            <button
+              onClick={() => setShowInstructions(s => !s)}
+              className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors mb-2"
+            >
+              <Settings size={13} />
+              Custom instructions (optional)
+              <span className="ml-auto">{showInstructions ? '▲' : '▼'}</span>
+            </button>
+            {showInstructions && (
+              <textarea
+                value={customInstructions}
+                onChange={e => setCustomInstructions(e.target.value)}
+                placeholder="e.g. Skip certifications. Emphasize Python. Include AWS skills."
+                rows={3}
+                className="w-full border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-accent/40 transition-all resize-none mb-3"
+                style={{ background: 'rgba(255,255,255,0.05)' }}
+              />
+            )}
+
+            <div className="flex flex-col gap-3 mt-2">
               <button
                 onClick={handleTailorAndApply}
                 className="btn-primary flex items-center justify-center gap-2 py-3"
