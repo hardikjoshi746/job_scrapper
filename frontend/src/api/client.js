@@ -1,10 +1,10 @@
 import axios from 'axios'
 
-// Dev: '/api' proxied by Vite to localhost:8000
-// Prod: direct Railway URL
-const baseURL = import.meta.env.PROD
-  ? 'https://jobscrapper-production-bb25.up.railway.app/api'
-  : '/api'
+// Dev (localhost): use Vite proxy at /api
+// Prod (Vercel): call Railway directly
+const baseURL = window.location.hostname === 'localhost'
+  ? '/api'
+  : 'https://jobscrapper-production-bb25.up.railway.app/api'
 
 const client = axios.create({
   baseURL,
