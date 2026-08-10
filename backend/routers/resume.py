@@ -1,17 +1,27 @@
+import os
+import tempfile
+import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-import os, aiofiles
 from dependencies import get_db, get_current_user
 from models import BaseResume, Application, User
 from services.resume_parser import extract_text
 from services.claude import tailor_resume
 from services.pdf_generator import generate_pdf
+from services.s3 import upload_file, get_presigned_url
+from config import settings
 
 router = APIRouter()
 
+# Use S3 in prod (when bucket is configured), local disk in dev
+USE_S3 = bool(settings.s3_bucket)
 UPLOAD_DIR = "uploads"
 GENERATED_DIR = "generated"
+
+if not USE_S3:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    os.makedirs(GENERATED_DIR, exist_ok=True)
 
 
 @router.post("/upload")
@@ -20,15 +30,32 @@ async def upload_resume(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
-    async with aiofiles.open(file_path, "wb") as f:
-        await f.write(await file.read())
-    extracted = extract_text(file_path)
+    file_bytes = await file.read()
+
+    if USE_S3:
+        # Write to temp file to extract text, then upload to S3
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
+            tmp.write(file_bytes)
+            tmp_path = tmp.name
+        try:
+            extracted = extract_text(tmp_path)
+            s3_key = f"uploads/{current_user.id}/{file.filename}"
+            upload_file(tmp_path, s3_key)
+        finally:
+            os.unlink(tmp_path)
+        stored_path = s3_key
+    else:
+        local_path = os.path.join(UPLOAD_DIR, file.filename)
+        async with aiofiles.open(local_path, "wb") as f:
+            await f.write(file_bytes)
+        extracted = extract_text(local_path)
+        stored_path = local_path
+
     db.query(BaseResume).filter(BaseResume.user_id == current_user.id).update({"is_active": False})
     db_resume = BaseResume(
         user_id=current_user.id,
         filename=file.filename,
-        file_path=file_path,
+        file_path=stored_path,
         extracted_text=extracted,
         is_active=True,
     )
@@ -60,17 +87,35 @@ async def tailor(
     ).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
+
     resume = db.query(BaseResume).filter(
         BaseResume.id == resume_id, BaseResume.user_id == current_user.id
     ).first()
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
+
     template_html = open("templates/resume.html").read()
     tailored_html = await tailor_resume(resume.extracted_text, app.job_description, template_html)
-    pdf_path = generate_pdf(tailored_html, f"{GENERATED_DIR}/{application_id}_tailored.pdf")
-    app.tailored_resume_path = pdf_path
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp_pdf_path = tmp.name
+
+    try:
+        generate_pdf(tailored_html, tmp_pdf_path)
+        if USE_S3:
+            s3_key = f"generated/{current_user.id}/{application_id}_tailored.pdf"
+            upload_file(tmp_pdf_path, s3_key)
+            stored_path = s3_key
+        else:
+            local_path = os.path.join(GENERATED_DIR, f"{application_id}_tailored.pdf")
+            os.replace(tmp_pdf_path, local_path)
+            stored_path = local_path
+    finally:
+        if os.path.exists(tmp_pdf_path):
+            os.unlink(tmp_pdf_path)
+
+    app.tailored_resume_path = stored_path
     db.commit()
-    db.refresh(app)
     return {"message": "tailored", "download_url": f"/api/resume/download/{application_id}"}
 
 
@@ -85,4 +130,10 @@ def download_resume(
     ).first()
     if not app or not app.tailored_resume_path:
         raise HTTPException(status_code=404, detail="Resume not found")
-    return FileResponse(app.tailored_resume_path, media_type="application/pdf", filename="tailored_resume.pdf")
+
+    if USE_S3:
+        url = get_presigned_url(app.tailored_resume_path)
+        return RedirectResponse(url)
+    else:
+        from fastapi.responses import FileResponse
+        return FileResponse(app.tailored_resume_path, media_type="application/pdf", filename="tailored_resume.pdf")

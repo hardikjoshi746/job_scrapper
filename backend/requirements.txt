@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic[email]
+pydantic-settings
+python-dotenv
+httpx
+anthropic
+python-multipart
+pymupdf
+python-docx
+weasyprint
+aiofiles
+python-jose[cryptography]
+passlib[bcrypt]
+psycopg2-binary
+boto3

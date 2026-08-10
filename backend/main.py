@@ -1,16 +1,25 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import applications, jobs, resume, apply, auth
 from database import Base, engine
 
-app = FastAPI(title="Job hunt application")
+app = FastAPI(title="Job Hunt Application")
+
+# Allow localhost in dev and Vercel domain in prod
+ALLOWED_ORIGINS = os.environ.get(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://localhost:3000"
+).split(",")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
+
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(applications.router, prefix="/api/applications", tags=["applications"])
 app.include_router(jobs.router, prefix="/api/jobs", tags=["jobs"])
@@ -22,6 +31,7 @@ app.include_router(apply.router, prefix="/api/apply", tags=["apply"])
 def startup():
     Base.metadata.create_all(bind=engine)
 
+
 @app.get("/")
 def root():
-    return {"message" : "backend is running"}
+    return {"message": "backend is running"}
