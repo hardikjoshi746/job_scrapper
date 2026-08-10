@@ -3,22 +3,79 @@ import anthropic
 
 client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", "").strip())
 
-async def tailor_resume(resume_text: str, job_description: str, template_html: str) -> str:
-    message = await client.messages.create(
-        model="claude-sonnet-5",
-        max_tokens=8000,
-        messages=[
-            {
-                "role": "user",
-                "content": f"""You are an ATS resume expert. Your job is to produce a complete, filled-in resume HTML by replacing ALL placeholder text in the template with REAL content from the candidate's resume, tailored to the job description.
+RESUME_CSS = """
+@page { size: A4; margin: 20px 32px; }
+* { box-sizing: border-box; }
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #1a1a1a; max-width: 700px; margin: 0 auto;
+  padding: 20px 32px; font-size: 8.2pt; line-height: 1.25;
+}
+:root { --accent: #0d2b6e; --dark: #1a1a1a; --mid: #444444; --light: #666666; }
+.name { text-align: center; font-size: 22pt; font-weight: 700; color: var(--accent); margin: 0 0 4px 0; }
+.contact { text-align: center; font-size: 8.4pt; color: var(--light); margin: 0 0 10px 0; }
+.contact span::after { content: "  |  "; color: var(--light); }
+.contact span:last-child::after { content: ""; }
+h2.section {
+  font-size: 9.5pt; font-weight: 700; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.3px;
+  margin: 8px 0 3px 0; padding-bottom: 2px;
+  border-bottom: 0.8pt solid var(--accent);
+}
+.entry-header { display: flex; justify-content: space-between; align-items: baseline; margin-top: 5px; }
+.entry-title-line { font-size: 8.8pt; }
+.entry-title { font-weight: 700; color: var(--dark); }
+.entry-company { color: var(--light); font-weight: 400; }
+.entry-dates { font-size: 8.8pt; color: var(--mid); white-space: nowrap; }
+ul.bullets { list-style: none; margin: 3px 0 0 0; padding: 0; }
+ul.bullets li { position: relative; padding-left: 14px; margin-bottom: 2px; font-size: 8.6pt; color: var(--dark); }
+ul.bullets li::before {
+  content: ""; position: absolute; left: 2px; top: 5px;
+  width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+}
+.summary { font-size: 8.6pt; color: var(--mid); margin: 4px 0 0 0; line-height: 1.4; }
+.skill-row { font-size: 8.6pt; margin-bottom: 3px; }
+.skill-label { font-weight: 700; color: var(--dark); }
+.skill-values { color: var(--mid); }
+.edu-entry { font-size: 8.8pt; margin-bottom: 2px; }
+.edu-school { font-weight: 700; color: var(--dark); }
+.edu-degree { color: var(--light); }
+@media print { body { padding: 0; } }
+"""
 
-IMPORTANT: The template contains placeholder text like "Full Name", "Job Title", "Company Name", "City, ST", "Bullet point describing...", "Skill", "University Name" etc. You MUST replace ALL of these with the candidate's actual information. Do not leave any placeholder text in the output.
 
-LOCATION: If the job description specifies a city/state/country, update the candidate's location in the header to match that location. If the job is remote, keep the candidate's original location.
+async def tailor_resume(
+    resume_text: str,
+    job_description: str,
+    custom_instructions: str = "",
+) -> str:
+    custom_block = f"\n\nUSER INSTRUCTIONS:\n{custom_instructions}" if custom_instructions.strip() else ""
 
-<template>
-{template_html}
-</template>
+    prompt = f"""You are an ATS resume expert. Produce a complete, tailored HTML resume using the candidate's ACTUAL resume content below.
+
+CRITICAL RULES — violating any is a failure:
+1. KEEP EVERY JOB. Include ALL work experience entries from the source resume. Never drop, merge, or skip any job entry regardless of relevance.
+2. USE ACTUAL CONTENT. Every name, title, company, date, degree, project, and achievement must come from the source resume. Never invent or omit data.
+3. ONE PAGE. The entire resume must fit on one A4 page. Max 3 bullets per job, max 2 projects (2 bullets each), max 4 achievements. Cut least-relevant bullets if needed — never cut entire jobs.
+4. TAILOR BULLETS. Rewrite bullets using the JD's exact keywords where the candidate's real experience matches. Use the JD's terminology but never fabricate skills or metrics.
+5. BOLD FOR IMPACT. In each bullet, bold (a) the opening achievement + metric clause e.g. <strong>Reduced latency by 40%</strong> and (b) 1-2 specific JD keywords inline e.g. <strong>RAG pipelines</strong>. Max 2 bold phrases per bullet.
+6. PROFESSIONAL SUMMARY. Write 2-3 sentences packing JD keywords while honestly reflecting the candidate's background.
+7. SECTIONS. Include all sections present in the source resume. Only omit a section if the user instructions say to skip it.{custom_block}
+
+CSS TO USE:
+<style>{RESUME_CSS}</style>
+
+AVAILABLE CSS CLASSES:
+- .name — candidate's full name (h1 or div)
+- .contact with <span> children — contact info separated by |
+- h2.section — section headings (Professional Summary, Professional Experience, etc.)
+- .summary — paragraph under Professional Summary
+- .entry-header > .entry-title-line (.entry-title + .entry-company) + .entry-dates — job/project header
+- ul.bullets > li — bullet points
+- .skill-row > .skill-label + .skill-values — skill category rows
+- .edu-entry > .edu-school + .edu-degree — education entries
+
+OUTPUT: Return ONLY a complete HTML document (<!doctype html> through </html>). No markdown, no code fences, no commentary.
 
 <resume>
 {resume_text}
@@ -26,75 +83,14 @@ LOCATION: If the job description specifies a city/state/country, update the cand
 
 <job_description>
 {job_description}
-</job_description>
+</job_description>"""
 
-How to tailor:
-
-1. READ THE JD FOR EXACT KEYWORDS AND PHRASING. Wherever the candidate's real experience
-   genuinely matches a requirement, rewrite that bullet to use the JD's own terminology
-   (e.g. if the JD says "distributed systems" and the resume says "backend services across
-   multiple servers," rephrase using "distributed systems"). Reuse the JD's language wherever
-   it's an honest description of what the candidate did.
-
-2. REORDER, DON'T INVENT. Reorder bullets and skills so the most JD-relevant ones lead. Pull
-   the candidate's strongest real matches to the top of each section and the skills list.
-
-3. ADJACENT-SKILL FRAMING IS OK, NEW SKILLS ARE NOT. You may describe a real skill using a
-   closely related term the JD uses (e.g. candidate used Redux -> may mention "Redux Toolkit"
-   only if this is a fair characterization; general REST API work -> may use "web services"
-   language the JD prefers) as long as the underlying work is genuinely the same activity.
-   You may NOT add a tool, language, framework, certification, or years of experience that
-   does not appear anywhere in the source resume. If the JD asks for something the resume has
-   zero basis for (e.g. a named framework, a specific cloud service, a required certification),
-   leave it out rather than fabricate it.
-
-4. NO INVENTED METRICS. Never create a number, percentage, or scale claim that isn't in the
-   source resume. You may rephrase an existing metric's framing but not its value.
-
-5. PRESERVE STRUCTURE. Keep the exact HTML structure and CSS from the template. Keep the same
-   number of bullets per role as the source resume unless a role has zero relevant content, in
-   which case trim rather than pad with fabricated bullets.
-
-6. ONE-PAGE DISCIPLINE. The entire resume MUST fit on exactly one A4 page. This is a hard
-   constraint. Each job role should have a maximum of 3 bullets. Academic projects: 2 bullets
-   each, max 2 projects. Achievements: max 4 items, one line each. Skills: keep concise.
-   If it still overflows, cut the least relevant bullets first, then shorten bullets to one line.
-
-7. HONESTY OVER KEYWORD-STUFFING. If the resume is a poor match for this JD in a core, required
-   area, do not force a match — better to under-optimize than to produce a resume that collapses
-   under a technical follow-up question. This tool answers to the candidate, not the ATS.
-
-8. ALL SECTIONS ARE MANDATORY. You MUST include every section from the template: Professional
-   Summary, Professional Experience, Academic Projects, Achievements, Technical Skills,
-   Certifications, AND Education. Never omit any section.
-
-9. PROFESSIONAL SUMMARY. Write 2-3 sentences in the summary section that pack in the most
-   important keywords from the job description while honestly reflecting the candidate's background.
-   This is the highest-value ATS section — make every word count.
-
-10. ONE PAGE, NO GAPS. Target exactly one full A4 page. Count your sections: header + summary
-    + 3 jobs (3 bullets each) + 2 projects + achievements + skills + education = one page.
-    If you are going over, cut bullets aggressively. Never let content spill to page 2.
-
-11. BOLD FOR IMPACT. In every bullet point, bold TWO types of phrases using <strong> tags:
-    (a) The opening action + result: bold the first clause that states what was achieved and
-        the metric, e.g. "<strong>Slashed AI agent token consumption by 4x</strong> by implementing..."
-        or "<strong>Reduced error rates by 40%</strong> through...". This is the most important
-        part of each bullet — make it pop.
-    (b) Key technologies and JD keywords inline: bold specific tools, frameworks, or exact
-        phrases from the job description that appear later in the sentence,
-        e.g. "by implementing <strong>RAG pipelines</strong> and <strong>vector database</strong> retrieval".
-    Do NOT bold filler words, prepositions, or entire sentences. Each bullet should have
-    1-2 bold phrases maximum. The result: scannable bullets where the achievement and
-    key tech both stand out at a glance.
-
-Output:
-Return ONLY the complete HTML, no explanation, no markdown code blocks, no commentary before or
-after the HTML."""
-            }
-        ]
+    message = await client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=8000,
+        messages=[{"role": "user", "content": prompt}]
     )
-    # find the first text block (Claude may include ThinkingBlocks before the actual response)
+
     for block in message.content:
         if block.type == "text":
             return block.text

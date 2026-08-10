@@ -6,6 +6,7 @@ import Navbar from './components/Navbar'
 import JobSearch from './pages/JobSearch'
 import Applications from './pages/Applications'
 import ResumeTailor from './pages/ResumeTailor'
+import CustomJob from './pages/CustomJob'
 import Login from './pages/Login'
 import Register from './pages/Register'
 
@@ -39,6 +40,7 @@ function AppLayout() {
           <Route path="/jobs" element={<ProtectedRoute><JobSearch /></ProtectedRoute>} />
           <Route path="/applications" element={<ProtectedRoute><Applications /></ProtectedRoute>} />
           <Route path="/resume" element={<ProtectedRoute><ResumeTailor /></ProtectedRoute>} />
+          <Route path="/custom-job" element={<ProtectedRoute><CustomJob /></ProtectedRoute>} />
           <Route path="/login" element={<Navigate to="/jobs" replace />} />
           <Route path="/register" element={<Navigate to="/jobs" replace />} />
         </Routes>

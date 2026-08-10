@@ -1,6 +1,7 @@
 import os
 import tempfile
 import aiofiles
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -77,16 +78,26 @@ def get_active_resume(db: Session = Depends(get_db), current_user: User = Depend
 
 @router.post("/tailor")
 async def tailor(
-    application_id: int,
     resume_id: int,
+    application_id: Optional[int] = None,
+    job_description: Optional[str] = None,
+    custom_instructions: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    app = db.query(Application).filter(
-        Application.id == application_id, Application.user_id == current_user.id
-    ).first()
-    if not app:
-        raise HTTPException(status_code=404, detail="Application not found")
+    # Resolve job description — prefer manually provided, fall back to application's
+    app = None
+    if application_id:
+        app = db.query(Application).filter(
+            Application.id == application_id, Application.user_id == current_user.id
+        ).first()
+        if not app:
+            raise HTTPException(status_code=404, detail="Application not found")
+        if not job_description:
+            job_description = app.job_description
+
+    if not job_description:
+        raise HTTPException(status_code=400, detail="Provide a job description or select an application")
 
     resume = db.query(BaseResume).filter(
         BaseResume.id == resume_id, BaseResume.user_id == current_user.id
@@ -94,29 +105,33 @@ async def tailor(
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
-    template_html = open("templates/resume.html").read()
-    tailored_html = await tailor_resume(resume.extracted_text, app.job_description, template_html)
+    tailored_html = await tailor_resume(resume.extracted_text, job_description, custom_instructions or "")
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp_pdf_path = tmp.name
 
+    # Use application_id or resume_id as the file identifier
+    file_id = application_id or resume_id
+
     try:
         generate_pdf(tailored_html, tmp_pdf_path)
         if USE_S3:
-            s3_key = f"generated/{current_user.id}/{application_id}_tailored.pdf"
+            s3_key = f"generated/{current_user.id}/{file_id}_tailored.pdf"
             upload_file(tmp_pdf_path, s3_key)
             stored_path = s3_key
         else:
-            local_path = os.path.join(GENERATED_DIR, f"{application_id}_tailored.pdf")
+            local_path = os.path.join(GENERATED_DIR, f"{file_id}_tailored.pdf")
             os.replace(tmp_pdf_path, local_path)
             stored_path = local_path
     finally:
         if os.path.exists(tmp_pdf_path):
             os.unlink(tmp_pdf_path)
 
-    app.tailored_resume_path = stored_path
-    db.commit()
-    return {"message": "tailored", "download_url": f"/api/resume/download/{application_id}"}
+    if app:
+        app.tailored_resume_path = stored_path
+        db.commit()
+
+    return {"message": "tailored", "download_url": f"/api/resume/download/{file_id}"}
 
 
 @router.get("/download/{application_id}")
