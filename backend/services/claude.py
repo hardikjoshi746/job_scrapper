@@ -6,7 +6,7 @@ client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""
 async def tailor_resume(resume_text: str, job_description: str, template_html: str) -> str:
     message = await client.messages.create(
         model="claude-sonnet-5",
-        max_tokens=4096,
+        max_tokens=8000,
         messages=[
             {
                 "role": "user",
@@ -76,11 +76,17 @@ How to tailor:
     bullet per role, or expand the summary. If too long, trim bullets to 1 line. The page should
     look completely full with zero wasted whitespace.
 
-11. BOLD KEYWORDS. Within bullet points and the summary, wrap every exact keyword or phrase that
-    appears in the job description in <strong> tags (e.g. <strong>distributed systems</strong>).
-    Also bold key metrics and technologies. This helps both ATS scanners and human readers
-    instantly spot relevant skills. Do not bold entire sentences — only the specific keyword or
-    phrase (2–5 words max per bold).
+11. BOLD FOR IMPACT. In every bullet point, bold TWO types of phrases using <strong> tags:
+    (a) The opening action + result: bold the first clause that states what was achieved and
+        the metric, e.g. "<strong>Slashed AI agent token consumption by 4x</strong> by implementing..."
+        or "<strong>Reduced error rates by 40%</strong> through...". This is the most important
+        part of each bullet — make it pop.
+    (b) Key technologies and JD keywords inline: bold specific tools, frameworks, or exact
+        phrases from the job description that appear later in the sentence,
+        e.g. "by implementing <strong>RAG pipelines</strong> and <strong>vector database</strong> retrieval".
+    Do NOT bold filler words, prepositions, or entire sentences. Each bullet should have
+    1-2 bold phrases maximum. The result: scannable bullets where the achievement and
+    key tech both stand out at a glance.
 
 Output:
 Return ONLY the complete HTML, no explanation, no markdown code blocks, no commentary before or
