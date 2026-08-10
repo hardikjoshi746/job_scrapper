@@ -99,7 +99,16 @@ OUTPUT: Return ONLY a complete HTML document (<!doctype html> through </html>). 
 
     for block in message.content:
         if block.type == "text":
-            return block.text
+            text = block.text.strip()
+            # Strip markdown code fences if Claude wraps the HTML despite instructions
+            if text.startswith("```"):
+                lines = text.split("\n")
+                # Remove first line (```html or ```) and last line (```)
+                lines = lines[1:] if lines[0].startswith("```") else lines
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                text = "\n".join(lines).strip()
+            return text
     raise ValueError("No text block in Claude response")
 
 
