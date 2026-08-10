@@ -2,8 +2,11 @@ import axios from 'axios'
 
 // In dev: falls back to '/api' (proxied by Vite to localhost:8000)
 // In prod (Vercel): set VITE_API_URL=https://your-app.railway.app/api
+const rawUrl = import.meta.env.VITE_API_URL || '/api'
+const baseURL = rawUrl.startsWith('http://') ? rawUrl.replace('http://', 'https://') : rawUrl
+
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
