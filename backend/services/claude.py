@@ -55,9 +55,10 @@ How to tailor:
    number of bullets per role as the source resume unless a role has zero relevant content, in
    which case trim rather than pad with fabricated bullets.
 
-6. ONE-PAGE DISCIPLINE. Keep total content sized for a single page at the template's font
-   sizes. If content is too long, cut the least JD-relevant bullets rather than shrinking fonts
-   below what the template defines.
+6. ONE-PAGE DISCIPLINE. The entire resume MUST fit on exactly one A4 page. This is a hard
+   constraint. Each job role should have a maximum of 3 bullets. Academic projects: 2 bullets
+   each, max 2 projects. Achievements: max 4 items, one line each. Skills: keep concise.
+   If it still overflows, cut the least relevant bullets first, then shorten bullets to one line.
 
 7. HONESTY OVER KEYWORD-STUFFING. If the resume is a poor match for this JD in a core, required
    area, do not force a match — better to under-optimize than to produce a resume that collapses
@@ -71,10 +72,9 @@ How to tailor:
    important keywords from the job description while honestly reflecting the candidate's background.
    This is the highest-value ATS section — make every word count.
 
-10. ONE PAGE, NO GAPS. The resume must fill the entire A4 page with no large empty spaces at
-    the bottom. If content is too short, expand bullet points to 2 lines, add a relevant extra
-    bullet per role, or expand the summary. If too long, trim bullets to 1 line. The page should
-    look completely full with zero wasted whitespace.
+10. ONE PAGE, NO GAPS. Target exactly one full A4 page. Count your sections: header + summary
+    + 3 jobs (3 bullets each) + 2 projects + achievements + skills + education = one page.
+    If you are going over, cut bullets aggressively. Never let content spill to page 2.
 
 11. BOLD FOR IMPACT. In every bullet point, bold TWO types of phrases using <strong> tags:
     (a) The opening action + result: bold the first clause that states what was achieved and
