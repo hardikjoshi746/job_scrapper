@@ -125,7 +125,7 @@ async def _evaluate_ats(resume_html: str, job_description: str) -> dict:
                 "content": f"<resume>\n{resume_html}\n</resume>\n\n<job_description>\n{job_description}\n</job_description>",
             },
         ],
-        max_tokens=1000,
+        max_completion_tokens=1000,
     )
     text = response.choices[0].message.content.strip()
     return json.loads(text)
