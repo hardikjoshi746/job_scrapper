@@ -1,12 +1,23 @@
-from sqlalchemy import Column, Integer, String, Text, Date, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Text, Date, DateTime, Boolean, ForeignKey
 from sqlalchemy.sql import func
 from database import Base
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    name = Column(String(255))
+    created_at = Column(DateTime, default=func.now())
 
 
 class Application(Base):
     __tablename__ = "applications"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     job_title = Column(String(255), nullable=False)
     company = Column(String(255), nullable=False)
     location = Column(String(255))
@@ -27,6 +38,7 @@ class BaseResume(Base):
     __tablename__ = "base_resumes"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     filename = Column(String(255))
     file_path = Column(Text)
     extracted_text = Column(Text)

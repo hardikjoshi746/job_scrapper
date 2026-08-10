@@ -1,7 +1,19 @@
-import { NavLink } from 'react-router-dom'
-import { Search, LayoutDashboard, FileText } from 'lucide-react'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { Search, LayoutDashboard, FileText, LogOut } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { useQueryClient } from '@tanstack/react-query'
 
 export default function Navbar() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  const handleLogout = () => {
+    queryClient.clear()
+    logout()
+    navigate('/login')
+  }
+
   const links = [
     { to: '/jobs', icon: <Search size={18} />, label: 'Job Search' },
     { to: '/applications', icon: <LayoutDashboard size={18} />, label: 'Applications' },
@@ -38,12 +50,27 @@ export default function Navbar() {
         ))}
       </nav>
 
-      {/* Bottom badge */}
-      <div className="mt-auto">
+      {/* Bottom: user + logout */}
+      <div className="mt-auto flex flex-col gap-3">
         <div className="glass rounded-lg p-3 text-center">
           <p className="text-xs text-slate-500">Powered by</p>
           <p className="text-xs font-semibold text-accent mt-0.5">Claude AI</p>
         </div>
+        {user && (
+          <div className="flex items-center justify-between px-2">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-white truncate">{user.name || user.email}</p>
+              {user.name && <p className="text-xs text-slate-500 truncate">{user.email}</p>}
+            </div>
+            <button
+              onClick={handleLogout}
+              className="text-slate-500 hover:text-red-400 transition-colors ml-2 shrink-0"
+              title="Sign out"
+            >
+              <LogOut size={15} />
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   )
