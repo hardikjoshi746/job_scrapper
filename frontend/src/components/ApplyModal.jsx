@@ -30,7 +30,9 @@ export default function ApplyModal({ job, onClose }) {
         params: { application_id: appId, resume_id: resumeId },
       })
 
-      setDownloadUrl(tailorRes.data.download_url)
+      // Build full URL using Axios base (handles both dev and prod)
+      const base = client.defaults.baseURL.replace(/\/api$/, '')
+      setDownloadUrl(`${base}${tailorRes.data.download_url}`)
       setStep('done')
       toast.success('Resume tailored!')
     } catch (err) {
