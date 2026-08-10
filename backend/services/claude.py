@@ -1,7 +1,7 @@
-import anthropic 
-from config import settings
+import os
+import anthropic
 
-client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", "").strip())
 
 async def tailor_resume(resume_text: str, job_description: str, template_html: str) -> str:
     message = await client.messages.create(
