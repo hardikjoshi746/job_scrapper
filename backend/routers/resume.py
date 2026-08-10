@@ -105,7 +105,8 @@ async def tailor(
     if not resume:
         raise HTTPException(status_code=404, detail="Resume not found")
 
-    tailored_html = await tailor_resume(resume.extracted_text, job_description, custom_instructions or "")
+    result = await tailor_resume(resume.extracted_text, job_description, custom_instructions or "")
+    tailored_html = result["html"]
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
         tmp_pdf_path = tmp.name
@@ -131,7 +132,14 @@ async def tailor(
         app.tailored_resume_path = stored_path
         db.commit()
 
-    return {"message": "tailored", "download_url": f"/api/resume/download/{file_id}"}
+    return {
+        "message": "tailored",
+        "download_url": f"/api/resume/download/{file_id}",
+        "ats_score": result["ats_score"],
+        "matched_keywords": result["matched_keywords"],
+        "missing_keywords": result["missing_keywords"],
+        "iterations": result["iterations"],
+    }
 
 
 @router.get("/download/{application_id}")

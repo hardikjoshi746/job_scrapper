@@ -1,7 +1,10 @@
 import os
+import json
 import anthropic
+from openai import AsyncOpenAI
 
-client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", "").strip())
+claude = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", "").strip())
+openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY", "").strip())
 
 RESUME_CSS = """
 @page { size: A4; margin: 20px 32px; }
@@ -44,12 +47,15 @@ ul.bullets li::before {
 """
 
 
-async def tailor_resume(
+async def _generate_resume(
     resume_text: str,
     job_description: str,
     custom_instructions: str = "",
+    feedback_context: str = "",
 ) -> str:
+    """Generate a single tailored resume HTML. Returns complete HTML string."""
     custom_block = f"\n\nUSER INSTRUCTIONS:\n{custom_instructions}" if custom_instructions.strip() else ""
+    feedback_block = feedback_context  # already formatted by caller
 
     prompt = f"""You are an ATS resume expert. Produce a complete, tailored HTML resume using the candidate's ACTUAL resume content below.
 
@@ -60,7 +66,7 @@ CRITICAL RULES — violating any is a failure:
 4. TAILOR BULLETS. Rewrite bullets using the JD's exact keywords where the candidate's real experience matches. Use the JD's terminology but never fabricate skills or metrics.
 5. BOLD FOR IMPACT. In each bullet, bold (a) the opening achievement + metric clause e.g. <strong>Reduced latency by 40%</strong> and (b) 1-2 specific JD keywords inline e.g. <strong>RAG pipelines</strong>. Max 2 bold phrases per bullet.
 6. PROFESSIONAL SUMMARY. Write 2-3 sentences packing JD keywords while honestly reflecting the candidate's background.
-7. SECTIONS. Include all sections present in the source resume. Only omit a section if the user instructions say to skip it.{custom_block}
+7. SECTIONS. Include all sections present in the source resume. Only omit a section if the user instructions say to skip it.{custom_block}{feedback_block}
 
 CSS TO USE:
 <style>{RESUME_CSS}</style>
@@ -85,7 +91,7 @@ OUTPUT: Return ONLY a complete HTML document (<!doctype html> through </html>). 
 {job_description}
 </job_description>"""
 
-    message = await client.messages.create(
+    message = await claude.messages.create(
         model="claude-sonnet-4-5",
         max_tokens=8000,
         messages=[{"role": "user", "content": prompt}]
@@ -94,4 +100,76 @@ OUTPUT: Return ONLY a complete HTML document (<!doctype html> through </html>). 
     for block in message.content:
         if block.type == "text":
             return block.text
-    raise ValueError("No text block found in Claude response")
+    raise ValueError("No text block in Claude response")
+
+
+async def _evaluate_ats(resume_html: str, job_description: str) -> dict:
+    """Score resume against JD using OpenAI. Returns {score, matched_keywords, missing_keywords, suggestions}."""
+    response = await openai_client.chat.completions.create(
+        model="gpt-5.5",
+        response_format={"type": "json_object"},
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a strict ATS (Applicant Tracking System) evaluator. "
+                    "Return only a JSON object with these keys: "
+                    "\"score\" (integer 0-100, keyword match percentage — be strict), "
+                    "\"matched_keywords\" (array of important JD keywords/phrases found in resume), "
+                    "\"missing_keywords\" (array of important JD keywords/phrases NOT in resume), "
+                    "\"suggestions\" (array of up to 5 specific improvements to raise the score)."
+                ),
+            },
+            {
+                "role": "user",
+                "content": f"<resume>\n{resume_html}\n</resume>\n\n<job_description>\n{job_description}\n</job_description>",
+            },
+        ],
+        max_tokens=1000,
+    )
+    text = response.choices[0].message.content.strip()
+    return json.loads(text)
+
+
+async def tailor_resume(
+    resume_text: str,
+    job_description: str,
+    custom_instructions: str = "",
+    max_iterations: int = 3,
+) -> dict:
+    """
+    Agentic resume tailoring loop.
+    Generates a resume, evaluates ATS score, and regenerates if score < 95.
+    Returns: {html, ats_score, matched_keywords, missing_keywords, iterations}
+    """
+    feedback_context = ""
+    html = None
+    evaluation = {"score": 0, "matched_keywords": [], "missing_keywords": [], "suggestions": []}
+
+    for iteration in range(1, max_iterations + 1):
+        html = await _generate_resume(resume_text, job_description, custom_instructions, feedback_context)
+        evaluation = await _evaluate_ats(html, job_description)
+
+        score = evaluation.get("score", 0)
+
+        if score >= 95:
+            break
+
+        # Build feedback context for next iteration
+        if iteration < max_iterations:
+            missing = ", ".join(evaluation.get("missing_keywords", []))
+            suggestions = "\n- ".join(evaluation.get("suggestions", []))
+            feedback_context = (
+                f"\n\nPREVIOUS ATTEMPT ATS SCORE: {score}% — BELOW TARGET OF 95%.\n"
+                f"MISSING KEYWORDS (must incorporate): {missing}\n"
+                f"SPECIFIC IMPROVEMENTS REQUIRED:\n- {suggestions}\n"
+                f"Fix all of the above in this new attempt while keeping all rules."
+            )
+
+    return {
+        "html": html,
+        "ats_score": evaluation.get("score", 0),
+        "matched_keywords": evaluation.get("matched_keywords", []),
+        "missing_keywords": evaluation.get("missing_keywords", []),
+        "iterations": iteration,
+    }

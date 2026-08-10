@@ -5,7 +5,7 @@ import toast from 'react-hot-toast'
 
 export default function ApplyModal({ job, onClose }) {
   const [step, setStep] = useState('confirm') // confirm | tailoring | done
-  const [downloadUrl, setDownloadUrl] = useState(null)
+  const [tailorResult, setTailorResult] = useState(null)
   const [customInstructions, setCustomInstructions] = useState('')
   const [showInstructions, setShowInstructions] = useState(false)
 
@@ -32,8 +32,7 @@ export default function ApplyModal({ job, onClose }) {
       if (customInstructions.trim()) params.custom_instructions = customInstructions.trim()
       const tailorRes = await client.post('/resume/tailor', null, { params })
 
-      // Store just the path — Axios client adds the base URL automatically
-      setDownloadUrl(tailorRes.data.download_url.replace('/api', ''))
+      setTailorResult(tailorRes.data)
       setStep('done')
       toast.success('Resume tailored!')
     } catch (err) {
@@ -132,15 +131,42 @@ export default function ApplyModal({ job, onClose }) {
         )}
 
         {/* Done step */}
-        {step === 'done' && (
+        {step === 'done' && tailorResult && (
           <div className="flex flex-col gap-3">
-            <div className="bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3 text-center mb-2">
-              <p className="text-green-300 text-sm font-medium">Resume tailored successfully!</p>
+            {/* ATS score badge */}
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3 text-center">
+              <p className="text-green-300 text-sm font-medium mb-0.5">Resume tailored successfully!</p>
+              <p className="text-white text-lg font-bold">
+                ATS Score: <span className={
+                  tailorResult.ats_score >= 90 ? 'text-green-400' :
+                  tailorResult.ats_score >= 75 ? 'text-yellow-400' : 'text-red-400'
+                }>{tailorResult.ats_score}%</span>
+              </p>
+              {tailorResult.iterations > 1 && (
+                <p className="text-slate-500 text-xs mt-0.5">Refined in {tailorResult.iterations} iterations</p>
+              )}
             </div>
+
+            {/* Matched keywords */}
+            {tailorResult.matched_keywords?.length > 0 && (
+              <div>
+                <p className="text-xs text-slate-400 mb-1.5">Keywords matched:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {tailorResult.matched_keywords.slice(0, 10).map((kw, i) => (
+                    <span key={i} className="px-2 py-0.5 rounded-full text-[11px] bg-green-500/10 text-green-300 border border-green-500/20">{kw}</span>
+                  ))}
+                  {tailorResult.matched_keywords.length > 10 && (
+                    <span className="text-[11px] text-slate-500">+{tailorResult.matched_keywords.length - 10} more</span>
+                  )}
+                </div>
+              </div>
+            )}
+
             <button
               onClick={async () => {
                 try {
-                  const res = await client.get(downloadUrl, { responseType: 'blob' })
+                  const path = tailorResult.download_url.replace('/api', '')
+                  const res = await client.get(path, { responseType: 'blob' })
                   const url = window.URL.createObjectURL(res.data)
                   const a = document.createElement('a')
                   a.href = url

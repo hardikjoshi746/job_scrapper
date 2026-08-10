@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { Upload, FileText, Sparkles, Download, ClipboardList, Settings } from 'lucide-react'
+import { Upload, FileText, Sparkles, ClipboardList, Settings } from 'lucide-react'
 import client from '../api/client'
 import toast from 'react-hot-toast'
+import ATSResult from '../components/ATSResult'
 
 async function fetchApplications() {
   const res = await client.get('/applications')
@@ -21,7 +22,7 @@ export default function ResumeTailor() {
   const [pastedJD, setPastedJD] = useState('')
   const [customInstructions, setCustomInstructions] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [downloadUrl, setDownloadUrl] = useState(null)
+  const [tailorResult, setTailorResult] = useState(null)
 
   const { data: applications = [] } = useQuery({
     queryKey: ['applications'],
@@ -69,7 +70,7 @@ export default function ResumeTailor() {
     },
     onSuccess: (data) => {
       toast.success('Resume tailored!')
-      setDownloadUrl(data.download_url)
+      setTailorResult(data)
     },
     onError: (err) => toast.error(err.response?.data?.detail || 'Tailoring failed'),
   })
@@ -83,7 +84,8 @@ export default function ResumeTailor() {
 
   const handleDownload = async () => {
     try {
-      const res = await client.get(downloadUrl.replace('/api', ''), { responseType: 'blob' })
+      const path = tailorResult.download_url.replace('/api', '')
+      const res = await client.get(path, { responseType: 'blob' })
       const url = window.URL.createObjectURL(res.data)
       const a = document.createElement('a')
       a.href = url
@@ -230,21 +232,15 @@ export default function ResumeTailor() {
         {tailorMutation.isPending ? 'Tailoring with Claude AI...' : 'Tailor Resume'}
       </button>
 
-      {/* Download */}
-      {downloadUrl && (
-        <div className="glass p-6 border border-accent/20">
-          <h2 className="text-white font-semibold mb-3 flex items-center gap-2">
-            <Download size={16} className="text-accent" />
-            Tailored Resume Ready
-          </h2>
-          <button
-            onClick={handleDownload}
-            className="btn-primary flex items-center justify-center gap-2 w-full"
-          >
-            <Download size={15} />
-            Download PDF
-          </button>
-        </div>
+      {/* ATS Result */}
+      {tailorResult && (
+        <ATSResult
+          atsScore={tailorResult.ats_score}
+          matchedKeywords={tailorResult.matched_keywords}
+          missingKeywords={tailorResult.missing_keywords}
+          iterations={tailorResult.iterations}
+          onDownload={handleDownload}
+        />
       )}
     </div>
   )
