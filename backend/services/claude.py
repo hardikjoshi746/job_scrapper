@@ -105,30 +105,41 @@ OUTPUT: Return ONLY a complete HTML document (<!doctype html> through </html>). 
 
 async def _evaluate_ats(resume_html: str, job_description: str) -> dict:
     """Score resume against JD using OpenAI. Returns {score, matched_keywords, missing_keywords, suggestions}."""
-    response = await openai_client.chat.completions.create(
-        model="gpt-5.5",
-        response_format={"type": "json_object"},
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are a strict ATS (Applicant Tracking System) evaluator. "
-                    "Return only a JSON object with these keys: "
-                    "\"score\" (integer 0-100, keyword match percentage — be strict), "
-                    "\"matched_keywords\" (array of important JD keywords/phrases found in resume), "
-                    "\"missing_keywords\" (array of important JD keywords/phrases NOT in resume), "
-                    "\"suggestions\" (array of up to 5 specific improvements to raise the score)."
-                ),
-            },
-            {
-                "role": "user",
-                "content": f"<resume>\n{resume_html}\n</resume>\n\n<job_description>\n{job_description}\n</job_description>",
-            },
-        ],
-        max_completion_tokens=1000,
-    )
-    text = response.choices[0].message.content.strip()
-    return json.loads(text)
+    fallback = {"score": 80, "matched_keywords": [], "missing_keywords": [], "suggestions": []}
+    try:
+        response = await openai_client.chat.completions.create(
+            model="gpt-5.5",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a strict ATS (Applicant Tracking System) evaluator. "
+                        "Return ONLY a valid JSON object — no markdown, no code fences — with these keys: "
+                        "\"score\" (integer 0-100, keyword match percentage — be strict), "
+                        "\"matched_keywords\" (array of important JD keywords/phrases found in resume), "
+                        "\"missing_keywords\" (array of important JD keywords/phrases NOT in resume), "
+                        "\"suggestions\" (array of up to 5 specific improvements to raise the score)."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"<resume>\n{resume_html}\n</resume>\n\n<job_description>\n{job_description}\n</job_description>",
+                },
+            ],
+            max_completion_tokens=1000,
+        )
+        text = (response.choices[0].message.content or "").strip()
+        # Strip markdown fences if present
+        if text.startswith("```"):
+            text = text.split("```")[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
+        if not text:
+            return fallback
+        return json.loads(text)
+    except Exception:
+        return fallback
 
 
 async def tailor_resume(
@@ -136,18 +147,27 @@ async def tailor_resume(
     job_description: str,
     custom_instructions: str = "",
     max_iterations: int = 3,
+    progress_callback=None,
 ) -> dict:
     """
     Agentic resume tailoring loop.
     Generates a resume, evaluates ATS score, and regenerates if score < 95.
+    progress_callback: optional async callable(step: str, data: dict)
     Returns: {html, ats_score, matched_keywords, missing_keywords, iterations}
     """
     feedback_context = ""
     html = None
     evaluation = {"score": 0, "matched_keywords": [], "missing_keywords": [], "suggestions": []}
 
+    async def emit(step, data=None):
+        if progress_callback:
+            await progress_callback(step, data or {})
+
     for iteration in range(1, max_iterations + 1):
+        await emit("generating", {"iteration": iteration, "total": max_iterations})
         html = await _generate_resume(resume_text, job_description, custom_instructions, feedback_context)
+
+        await emit("evaluating", {"iteration": iteration})
         evaluation = await _evaluate_ats(html, job_description)
 
         score = evaluation.get("score", 0)
@@ -155,8 +175,12 @@ async def tailor_resume(
         if score >= 95:
             break
 
-        # Build feedback context for next iteration
         if iteration < max_iterations:
+            await emit("refining", {
+                "iteration": iteration,
+                "score": score,
+                "missing_keywords": evaluation.get("missing_keywords", []),
+            })
             missing = ", ".join(evaluation.get("missing_keywords", []))
             suggestions = "\n- ".join(evaluation.get("suggestions", []))
             feedback_context = (

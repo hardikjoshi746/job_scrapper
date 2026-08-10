@@ -1,9 +1,11 @@
 import os
+import json
+import asyncio
 import tempfile
 import aiofiles
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from dependencies import get_db, get_current_user
 from models import BaseResume, Application, User
@@ -140,6 +142,101 @@ async def tailor(
         "missing_keywords": result["missing_keywords"],
         "iterations": result["iterations"],
     }
+
+
+@router.post("/tailor/stream")
+async def tailor_stream(
+    resume_id: int,
+    application_id: Optional[int] = None,
+    job_description: Optional[str] = None,
+    custom_instructions: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Validate inputs before streaming starts
+    app = None
+    if application_id:
+        app = db.query(Application).filter(
+            Application.id == application_id, Application.user_id == current_user.id
+        ).first()
+        if not app:
+            raise HTTPException(status_code=404, detail="Application not found")
+        if not job_description:
+            job_description = app.job_description
+
+    if not job_description:
+        raise HTTPException(status_code=400, detail="Provide a job description or select an application")
+
+    resume = db.query(BaseResume).filter(
+        BaseResume.id == resume_id, BaseResume.user_id == current_user.id
+    ).first()
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    resume_text = resume.extracted_text
+    file_id = application_id or resume_id
+
+    async def event_stream():
+        queue = asyncio.Queue()
+
+        async def progress_callback(step: str, data: dict):
+            await queue.put({"step": step, **data})
+
+        async def run():
+            try:
+                result = await tailor_resume(
+                    resume_text, job_description, custom_instructions or "",
+                    progress_callback=progress_callback,
+                )
+                tailored_html = result["html"]
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                    tmp_pdf_path = tmp.name
+
+                try:
+                    generate_pdf(tailored_html, tmp_pdf_path)
+                    if USE_S3:
+                        s3_key = f"generated/{current_user.id}/{file_id}_tailored.pdf"
+                        upload_file(tmp_pdf_path, s3_key)
+                        stored_path = s3_key
+                    else:
+                        local_path = os.path.join(GENERATED_DIR, f"{file_id}_tailored.pdf")
+                        os.replace(tmp_pdf_path, local_path)
+                        stored_path = local_path
+                finally:
+                    if os.path.exists(tmp_pdf_path):
+                        os.unlink(tmp_pdf_path)
+
+                if app:
+                    app.tailored_resume_path = stored_path
+                    db.commit()
+
+                await queue.put({
+                    "step": "done",
+                    "download_url": f"/api/resume/download/{file_id}",
+                    "ats_score": result["ats_score"],
+                    "matched_keywords": result["matched_keywords"],
+                    "missing_keywords": result["missing_keywords"],
+                    "iterations": result["iterations"],
+                })
+            except Exception as e:
+                await queue.put({"step": "error", "message": str(e)})
+            finally:
+                await queue.put(None)
+
+        asyncio.create_task(run())
+
+        while True:
+            item = await queue.get()
+            if item is None:
+                break
+            yield f"data: {json.dumps(item)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/download/{application_id}")

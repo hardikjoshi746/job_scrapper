@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { FileText, Sparkles, Settings, ClipboardList } from 'lucide-react'
-import client from '../api/client'
+import client, { baseURL } from '../api/client'
 import toast from 'react-hot-toast'
 import ATSResult from '../components/ATSResult'
+import TailorProgress from '../components/TailorProgress'
 
 async function fetchActiveResume() {
   const res = await client.get('/resume/active')
@@ -16,6 +17,8 @@ export default function CustomJob() {
   const [jd, setJd] = useState('')
   const [customInstructions, setCustomInstructions] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [tailoring, setTailoring] = useState(false)
+  const [progress, setProgress] = useState(null)
   const [tailorResult, setTailorResult] = useState(null)
 
   const { data: activeResume } = useQuery({
@@ -24,11 +27,15 @@ export default function CustomJob() {
     retry: false,
   })
 
-  const tailorMutation = useMutation({
-    mutationFn: async () => {
-      if (!activeResume) throw new Error('No active resume')
-      if (!jd.trim()) throw new Error('Paste a job description')
+  const handleTailor = async () => {
+    if (!activeResume) return toast.error('Upload a resume first on the Resume page')
+    if (!jd.trim()) return toast.error('Paste a job description')
 
+    setTailoring(true)
+    setProgress({ step: 'generating', iteration: 1, total: 3 })
+    setTailorResult(null)
+
+    try {
       // Save as application first so the PDF is linked
       const appRes = await client.post('/applications', {
         job_title: jobTitle.trim() || 'Custom Job',
@@ -38,27 +45,53 @@ export default function CustomJob() {
       })
       const appId = appRes.data.id
 
-      const params = {
+      const params = new URLSearchParams({
         resume_id: activeResume.id,
         application_id: appId,
         job_description: jd.trim(),
+      })
+      if (customInstructions.trim()) params.set('custom_instructions', customInstructions.trim())
+
+      const token = localStorage.getItem('auth_token')
+      const response = await fetch(`${baseURL}/resume/tailor/stream?${params}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.detail || 'Tailoring failed')
       }
-      if (customInstructions.trim()) params.custom_instructions = customInstructions.trim()
 
-      const res = await client.post('/resume/tailor', null, { params })
-      return res.data
-    },
-    onSuccess: (data) => {
-      toast.success('Resume tailored!')
-      setTailorResult(data)
-    },
-    onError: (err) => toast.error(err.response?.data?.detail || err.message || 'Tailoring failed'),
-  })
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
 
-  const handleTailor = () => {
-    if (!activeResume) return toast.error('Upload a resume first on the Resume page')
-    if (!jd.trim()) return toast.error('Paste a job description')
-    tailorMutation.mutate()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = JSON.parse(line.slice(6))
+          if (data.step === 'done') {
+            setTailorResult(data)
+            toast.success('Resume tailored!')
+          } else if (data.step === 'error') {
+            throw new Error(data.message)
+          } else {
+            setProgress(data)
+          }
+        }
+      }
+    } catch (err) {
+      toast.error(err.message || 'Tailoring failed')
+    } finally {
+      setTailoring(false)
+      setProgress(null)
+    }
   }
 
   const handleDownload = async () => {
@@ -160,15 +193,18 @@ export default function CustomJob() {
       {/* Tailor button */}
       <button
         onClick={handleTailor}
-        disabled={!activeResume || tailorMutation.isPending}
+        disabled={!activeResume || tailoring}
         className="btn-primary w-full flex items-center justify-center gap-2 py-3 mb-6 disabled:opacity-40"
       >
         <Sparkles size={15} />
-        {tailorMutation.isPending ? 'Tailoring with Claude AI...' : 'Tailor Resume'}
+        {tailoring ? 'Working...' : 'Tailor Resume'}
       </button>
 
+      {/* Progress */}
+      {tailoring && progress && <TailorProgress progress={progress} />}
+
       {/* ATS Result */}
-      {tailorResult && (
+      {!tailoring && tailorResult && (
         <ATSResult
           atsScore={tailorResult.ats_score}
           matchedKeywords={tailorResult.matched_keywords}

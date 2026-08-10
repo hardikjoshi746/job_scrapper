@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Dev (localhost): use Vite proxy at /api
 // Prod (Vercel): call Railway directly
-const baseURL = window.location.hostname === 'localhost'
+export const baseURL = window.location.hostname === 'localhost'
   ? '/api'
   : 'https://jobscrapper-production-bb25.up.railway.app/api'
 
