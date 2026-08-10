@@ -30,9 +30,8 @@ export default function ApplyModal({ job, onClose }) {
         params: { application_id: appId, resume_id: resumeId },
       })
 
-      // Build full URL using Axios base (handles both dev and prod)
-      const base = client.defaults.baseURL.replace(/\/api$/, '')
-      setDownloadUrl(`${base}${tailorRes.data.download_url}`)
+      // Store just the path — Axios client adds the base URL automatically
+      setDownloadUrl(tailorRes.data.download_url.replace('/api', ''))
       setStep('done')
       toast.success('Resume tailored!')
     } catch (err) {
@@ -115,15 +114,25 @@ export default function ApplyModal({ job, onClose }) {
             <div className="bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3 text-center mb-2">
               <p className="text-green-300 text-sm font-medium">Resume tailored successfully!</p>
             </div>
-            <a
-              href={downloadUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={async () => {
+                try {
+                  const res = await client.get(downloadUrl, { responseType: 'blob' })
+                  const url = window.URL.createObjectURL(res.data)
+                  const a = document.createElement('a')
+                  a.href = url
+                  a.download = 'tailored_resume.pdf'
+                  a.click()
+                  window.URL.revokeObjectURL(url)
+                } catch {
+                  toast.error('Download failed')
+                }
+              }}
               className="btn-primary flex items-center justify-center gap-2 py-3"
             >
               <Download size={15} />
               Download Tailored Resume
-            </a>
+            </button>
             <a
               href={job.redirect_url}
               target="_blank"
