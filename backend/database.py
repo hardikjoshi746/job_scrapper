@@ -3,7 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./jobhunt.db")
+DATABASE_URL = os.environ.get("DATABASE_URL") or "sqlite:///./jobhunt.db"
 
 # Railway PostgreSQL uses postgres:// but SQLAlchemy needs postgresql://
 if DATABASE_URL.startswith("postgres://"):

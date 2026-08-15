@@ -79,8 +79,8 @@ def get_active_resume(db: Session = Depends(get_db), current_user: User = Depend
 
 @router.post("/tailor")
 async def tailor(
-    resume_id: int,
-    application_id: Optional[int] = None,
+    resume_id: str,
+    application_id: Optional[str] = None,
     job_description: Optional[str] = None,
     custom_instructions: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -145,8 +145,8 @@ async def tailor(
 
 @router.post("/tailor/stream")
 async def tailor_stream(
-    resume_id: int,
-    application_id: Optional[int] = None,
+    resume_id: str,
+    application_id: Optional[str] = None,
     job_description: Optional[str] = None,
     custom_instructions: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -240,7 +240,7 @@ async def tailor_stream(
 
 @router.get("/download/{application_id}")
 def download_resume(
-    application_id: int,
+    application_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

@@ -20,7 +20,7 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_token(user_id: int) -> str:
+def create_token(user_id: str) -> str:
     payload = {
         "sub": str(user_id),
         "exp": datetime.utcnow() + timedelta(days=30),

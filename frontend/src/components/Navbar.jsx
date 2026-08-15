@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Search, LayoutDashboard, FileText, LogOut, PenLine } from 'lucide-react'
+import { Search, LayoutDashboard, FileText, LogOut, PenLine, Globe } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useQueryClient } from '@tanstack/react-query'
 
@@ -16,6 +16,7 @@ export default function Navbar() {
 
   const links = [
     { to: '/jobs', icon: <Search size={18} />, label: 'Job Search' },
+    { to: '/scraper', icon: <Globe size={18} />, label: 'Job Scraper' },
     { to: '/applications', icon: <LayoutDashboard size={18} />, label: 'Applications' },
     { to: '/resume', icon: <FileText size={18} />, label: 'Resume' },
     { to: '/custom-job', icon: <PenLine size={18} />, label: 'Custom Job' },

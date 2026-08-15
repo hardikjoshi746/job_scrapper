@@ -17,3 +17,8 @@ passlib[bcrypt]
 bcrypt==4.0.1
 psycopg2-binary
 boto3
+slowapi
+feedparser
+beautifulsoup4
+lxml
+alembic

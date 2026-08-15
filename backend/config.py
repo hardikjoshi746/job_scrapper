@@ -14,8 +14,16 @@ class Settings(BaseSettings):
     aws_region: str = "us-east-1"
     s3_bucket: str = ""
 
+    # Serper (Google Jobs)
+    serper_api_key: str = ""
+
+    # Optional extras that may appear in .env
+    database_url: str = ""
+    allowed_origins: str = ""
+
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

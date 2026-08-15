@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Navbar from './components/Navbar'
 import JobSearch from './pages/JobSearch'
+import JobScraper from './pages/JobScraper'
 import Applications from './pages/Applications'
 import ResumeTailor from './pages/ResumeTailor'
 import CustomJob from './pages/CustomJob'
@@ -38,6 +39,7 @@ function AppLayout() {
         <Routes>
           <Route path="/" element={<Navigate to="/jobs" replace />} />
           <Route path="/jobs" element={<ProtectedRoute><JobSearch /></ProtectedRoute>} />
+          <Route path="/scraper" element={<ProtectedRoute><JobScraper /></ProtectedRoute>} />
           <Route path="/applications" element={<ProtectedRoute><Applications /></ProtectedRoute>} />
           <Route path="/resume" element={<ProtectedRoute><ResumeTailor /></ProtectedRoute>} />
           <Route path="/custom-job" element={<ProtectedRoute><CustomJob /></ProtectedRoute>} />

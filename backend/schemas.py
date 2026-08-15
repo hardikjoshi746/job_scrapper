@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, EmailStr
 from datetime import date, datetime
-from typing import Optional
+from typing import Optional, List
 
 
 # --- Auth Schemas ---
@@ -17,13 +17,13 @@ class UserLogin(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-    user_id: int
+    user_id: str
     email: str
     name: Optional[str]
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    id: int
+    id: str
     email: str
     name: Optional[str]
     created_at: datetime
@@ -62,7 +62,7 @@ class ApplicationUpdate(BaseModel):
 class ApplicationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: str
     job_title: str
     company: str
     location: Optional[str]
@@ -84,8 +84,48 @@ class ApplicationResponse(BaseModel):
 class ResumeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: str
     filename: str
     file_path: str
     is_active: bool
     created_at: datetime
+
+
+# --- Scraper Schemas ---
+
+class ScrapeRequest(BaseModel):
+    keyword: str
+    location: Optional[str] = "remote"
+    sources: Optional[List[str]] = None        # None = all sources
+    experience_level: Optional[str] = None    # entry | associate | mid | senior | lead
+    date_posted: Optional[str] = None         # any | day | week | month
+
+class ScrapedJobOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    source: str
+    job_url: str
+    title: str
+    company: Optional[str] = None
+    location: Optional[str] = None
+    description: Optional[str] = None
+    salary_min: Optional[int] = None
+    salary_max: Optional[int] = None
+    currency: Optional[str] = None
+    tags: Optional[List[str]] = None
+    posted_at: Optional[datetime] = None
+    is_remote: bool = False
+
+class ScrapeResponse(BaseModel):
+    total: int
+    sources: dict
+    results: List[ScrapedJobOut]
+    errors: dict
+
+class SaveScrapedJobRequest(BaseModel):
+    job_url: str
+    title: str
+    company: Optional[str] = None
+    location: Optional[str] = None
+    job_description: Optional[str] = None

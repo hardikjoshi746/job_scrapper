@@ -23,7 +23,7 @@ def create_application(data: ApplicationCreate, db: Session = Depends(get_db), c
 
 
 @router.get("/{app_id}", response_model=ApplicationResponse)
-def get_application_by_id(app_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_application_by_id(app_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     app = db.query(Application).filter(Application.id == app_id, Application.user_id == current_user.id).first()
     if not app:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -31,7 +31,7 @@ def get_application_by_id(app_id: int, db: Session = Depends(get_db), current_us
 
 
 @router.patch("/{app_id}", response_model=ApplicationResponse)
-def update_application(app_id: int, data: ApplicationUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_application(app_id: str, data: ApplicationUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_app = db.query(Application).filter(Application.id == app_id, Application.user_id == current_user.id).first()
     if not db_app:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -43,7 +43,7 @@ def update_application(app_id: int, data: ApplicationUpdate, db: Session = Depen
 
 
 @router.delete("/{app_id}")
-def delete_application(app_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def delete_application(app_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_app = db.query(Application).filter(Application.id == app_id, Application.user_id == current_user.id).first()
     if not db_app:
         raise HTTPException(status_code=404, detail="Application not found")
